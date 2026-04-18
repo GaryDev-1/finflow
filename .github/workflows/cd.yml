@@ -1,0 +1,140 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
+  RESOURCE_GROUP: rg-finflow-prod
+  ENVIRONMENT: finflow-env
+
+jobs:
+  build-and-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: meta
+        run: echo "version=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Log in to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push accounts-service
+        uses: docker/build-push-action@v6
+        with:
+          context: services/accounts-service
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/accounts-service:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/accounts-service:latest
+          cache-from: type=gha,scope=accounts-service
+          cache-to: type=gha,mode=max,scope=accounts-service
+
+      - name: Build and push transactions-service
+        uses: docker/build-push-action@v6
+        with:
+          context: services/transactions-service
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/transactions-service:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/transactions-service:latest
+          cache-from: type=gha,scope=transactions-service
+          cache-to: type=gha,mode=max,scope=transactions-service
+
+      - name: Build and push loans-service
+        uses: docker/build-push-action@v6
+        with:
+          context: services/loans-service
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/loans-service:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/loans-service:latest
+          cache-from: type=gha,scope=loans-service
+          cache-to: type=gha,mode=max,scope=loans-service
+
+      - name: Build and push bff
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/bff
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/bff:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/bff:latest
+          cache-from: type=gha,scope=bff
+          cache-to: type=gha,mode=max,scope=bff
+
+      - name: Build and push web
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/web
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/web:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/web:latest
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+          build-args: |
+            NEXT_PUBLIC_BFF_URL=${{ secrets.NEXT_PUBLIC_BFF_URL }}
+
+  deploy:
+    name: Deploy to Azure Container Apps
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy accounts-service
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppName: accounts-service
+          imageToDeploy: ${{ env.REGISTRY }}/accounts-service:${{ needs.build-and-push.outputs.image-tag }}
+
+      - name: Deploy transactions-service
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppName: transactions-service
+          imageToDeploy: ${{ env.REGISTRY }}/transactions-service:${{ needs.build-and-push.outputs.image-tag }}
+
+      - name: Deploy loans-service
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppName: loans-service
+          imageToDeploy: ${{ env.REGISTRY }}/loans-service:${{ needs.build-and-push.outputs.image-tag }}
+
+      - name: Deploy bff
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppName: bff
+          imageToDeploy: ${{ env.REGISTRY }}/bff:${{ needs.build-and-push.outputs.image-tag }}
+
+      - name: Deploy web
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppName: web
+          imageToDeploy: ${{ env.REGISTRY }}/web:${{ needs.build-and-push.outputs.image-tag }}
