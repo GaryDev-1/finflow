@@ -1,0 +1,15 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE IF NOT EXISTS accounts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id VARCHAR(50) NOT NULL,
+  account_number VARCHAR(20) UNIQUE NOT NULL,
+  account_type VARCHAR(10) NOT NULL CHECK (account_type IN ('CHEQUE','SAVINGS','CREDIT')),
+  balance INTEGER NOT NULL DEFAULT 0,
+  currency VARCHAR(3) NOT NULL DEFAULT 'ZAR',
+  status VARCHAR(10) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','FROZEN','CLOSED')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
