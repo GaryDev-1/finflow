@@ -1,0 +1,8 @@
+scalar DateTime
+scalar Money
+
+type PageInfo {
+  total: Int!
+  page: Int!
+  hasNextPage: Boolean!
+}

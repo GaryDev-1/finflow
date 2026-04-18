@@ -1,0 +1,50 @@
+enum AccountType {
+  CHEQUE
+  SAVINGS
+  CREDIT
+}
+
+enum AccountStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+type Account {
+  id: ID!
+  userId: String!
+  accountNumber: String!
+  accountType: AccountType!
+  balance: Money!
+  currency: String!
+  status: AccountStatus!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  recentTransactions: [Transaction!]!
+}
+
+type AccountsResult {
+  accounts: [Account!]!
+  pageInfo: PageInfo!
+}
+
+type TransferResult {
+  fromAccount: Account!
+  toAccount: Account!
+  debitTransaction: Transaction!
+  creditTransaction: Transaction!
+}
+
+extend type Query {
+  accounts(userId: String, page: Int, limit: Int): AccountsResult!
+  account(id: ID!): Account
+}
+
+extend type Mutation {
+  transfer(
+    fromAccountId: ID!
+    toAccountId: ID!
+    amount: Int!
+    description: String
+  ): TransferResult!
+}

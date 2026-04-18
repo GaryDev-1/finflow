@@ -1,0 +1,14 @@
+type AuthUser {
+  id: String!
+  username: String!
+}
+
+type AuthPayload {
+  token: String!
+  user: AuthUser!
+}
+
+extend type Mutation {
+  login(username: String!, password: String!): AuthPayload!
+  logout: Boolean!
+}

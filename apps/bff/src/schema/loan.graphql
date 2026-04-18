@@ -1,0 +1,59 @@
+enum LoanStatus {
+  PENDING
+  ACTIVE
+  SETTLED
+  DEFAULTED
+  REJECTED
+}
+
+enum RepaymentStatus {
+  UPCOMING
+  PAID
+  OVERDUE
+  PARTIAL
+}
+
+type Repayment {
+  id: ID!
+  loanId: String!
+  dueDate: DateTime!
+  amount: Money!
+  status: RepaymentStatus!
+  paidAt: DateTime
+}
+
+type Loan {
+  id: ID!
+  userId: String!
+  principalAmount: Money!
+  outstandingBalance: Money!
+  interestRate: Float!
+  termMonths: Int!
+  monthlyInstalment: Money!
+  status: LoanStatus!
+  disbursedAt: DateTime
+  nextPaymentDate: DateTime
+  currency: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  repayments: [Repayment!]!
+}
+
+type LoansResult {
+  loans: [Loan!]!
+  pageInfo: PageInfo!
+}
+
+type RepaymentResult {
+  repayment: Repayment!
+  loan: Loan!
+}
+
+extend type Query {
+  loans(userId: String, status: LoanStatus): LoansResult!
+  loan(id: ID!): Loan
+}
+
+extend type Mutation {
+  makeRepayment(loanId: ID!, repaymentId: ID!): RepaymentResult!
+}

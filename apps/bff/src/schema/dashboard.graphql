@@ -1,0 +1,12 @@
+type DashboardSummary {
+  totalBalance: Money!
+  activeLoansCount: Int!
+  totalOutstanding: Money!
+  recentTransactions: [Transaction!]!
+  accounts: [Account!]!
+  activeLoans: [Loan!]!
+}
+
+extend type Query {
+  dashboard(userId: String!): DashboardSummary!
+}

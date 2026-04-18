@@ -1,0 +1,52 @@
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum TransactionCategory {
+  SALARY
+  TRANSFER
+  PAYMENT
+  WITHDRAWAL
+  DEPOSIT
+  FEE
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
+
+type Transaction {
+  id: ID!
+  accountId: String!
+  type: TransactionType!
+  amount: Money!
+  currency: String!
+  description: String!
+  category: TransactionCategory!
+  reference: String!
+  status: TransactionStatus!
+  transactionDate: DateTime!
+  createdAt: DateTime!
+}
+
+type TransactionSummary {
+  totalCredits: Money!
+  totalDebits: Money!
+  netBalance: Money!
+  transactionCount: Int!
+}
+
+type TransactionsResult {
+  transactions: [Transaction!]!
+  pageInfo: PageInfo!
+  summary: TransactionSummary!
+}
+
+extend type Query {
+  transactions(accountId: String, page: Int, limit: Int): TransactionsResult!
+  transaction(id: ID!): Transaction
+}
